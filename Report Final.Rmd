@@ -1,0 +1,160 @@
+---
+title: "Practical Machine Learning Project Report"
+author: "Machine Learning Student"
+date: "2023-08-06"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(caret)
+library(randomForest)
+```
+
+
+```{r load_results}
+# Load intermediate results
+load("intermediate_results.RData")
+```
+
+
+# Introduction
+
+   This report describes a model for predicting the quality of a specific exercise (Unilateral Dumbbell Biceps Curl) from sensor data collected on human test subjects and the dumbbell.  Six individuals performed the exercise in correctly and incorrectly.  All six subjects performed the single correct technique and the four incorrect techniques.  The model uses a machine learning algorithm trained on the sensor data for predicting which of the five techniques was performed.
+
+   The project and its data are derived from a paper called "Qualitative Activity Recognition of Weight Lifting Exercises" by Velloso, E; Bulling, A; Gellersen, H; Ugulino, W; Fuks,H 
+
+# Prediction Components
+
+## 1. Question  
+
+Can quantitative exercise data classify the exercise technique performed?
+
+## 2. Input Data
+
+Sensor measurements from six individuals performing ten repetitions of the exercise in five different techniques.  Class A is the correct technique, while classes B, C, D, and E are incorrect techniques.  Instrumentation data was collected from wearable devices on the individual’s body and the dumbbell.
+
+  The inertial measurement unit sensors collected data in four degrees of freedom from a belt, glove, arm band, and dumbbell.  The sensors provided roll, pitch, yaw data in addition to readings from an accelerometer, magnetometer, and gyroscope.   For the Euler angles (roll, pitch, and yaw) eight features of data were provided- mean, variance, standard deviation, maximum, minimum, amplitude, kurtosis, and skewness.   This statistical data differed from the raw data as it was calculated using a sliding window with different time lengths.  Accordingly, statistical data was not provided for each observation.
+     The project was provided with no test data.  This drove a cross-validation approach to testing the model.  Starting with the training set two partitions were created from the original training data using the caret (Classification And REgression Training) library function “createDataPartitionusing with p=0.7. 
+
+
+The model was trained on the training set and evaluated on the test set.  Model accuracy was computed, and then used to decide if there is a need to repeat cross validation with other methods
+
+## 3. Features
+
+The training and test data files contained a total of 159 features for the exercise technique classes.
+     Examining the data reveals that the statistical features are either missing or zero for several of the observations in the test data.  Accordingly, these features were deleted from the training data.  Furthermore, the feature “X” was an index and was deleted.  Finally, the feature “user_name” was deleted as an assumption was made that the data was independent of the individual performing the exercise.   The result was a training set with 65 features.
+     Below is the final list of features.
+
+
+```{r echo=FALSE}
+c("roll_belt","pitch_belt","yaw_belt","total_accel_belt",
+  "gyros_belt_x","gyros_belt_y","gyros_belt_z",
+  "accel_belt_x","accel_belt_y","accel_belt_z",
+  "magnet_belt_x","magnet_belt_y","magnet_belt_z",
+  "roll_arm","pitch_arm","yaw_arm","total_accel_arm",
+  "gyros_arm_x","gyros_arm_y","gyros_arm_z",
+  "accel_arm_x","accel_arm_y","accel_arm_z",
+  "magnet_arm_x","magnet_arm_y","magnet_arm_z",
+  "roll_dumbbell","pitch_dumbbell","yaw_dumbbell","total_accel_dumbbell",
+  "gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z",
+  "accel_dumbbell_x","accel_dumbbell_y","accel_dumbbell_z",
+  "magnet_dumbbell_x","magnet_dumbbell_y","magnet_dumbbell_z",
+  "roll_forearm","pitch_forearm","yaw_forearm","total_accel_forearm",
+  "gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z",
+  "accel_dumbbell_x","accel_dumbbell_y","accel_dumbbell_z",
+  "magnet_dumbbell_x","magnet_dumbbell_y","magnet_dumbbell_z",
+  "roll_forearm","pitch_forearm","yaw_forearm","total_accel_forearm",
+  "gyros_forearm_x","gyros_forearm_y","gyros_forearm_z",
+  "accel_forearm_x","accel_forearm_y","accel_forearm_z",
+  "magnet_forearm_x","magnet_forearm_y","magnet_forearm_z")
+```
+
+## 4. Algorithm
+
+  The Random Forest algorithm in the caret library was chosen as the prediction model for the following reasons.  1.)  Need to perform classification in terms of the exercise style; 2.)  Large number of features (65) in the data set; 3.) ability to capture non-linear relationships between the features on the class; and finally, 4.) less sensitive to outliers caused by noise in the sensor data.  
+
+## 5. Parameters
+
+  The process used to select parameter values for the random forest involves starting with the default values, then executing the model, and evaluating the results.  This is a “brute force” approach, however with the computational power and memory now available on personal notebook computers this is a reasonable assumption.  The training was executed on a notebook computer with the following specifications:  Intel Core i5-8250U CPU @ 1.60GHz, 1800 MHz, 4 Cores, 8 Logical Processors with 16 GB of internal memory.
+
+   The initial conditions of the model execution used the default settings for the parameters.  According to the documentation on caret’s random forest method the default parameters are the following:
+   
+mtry: The number of features randomly selected at each split. The default value for mtry is the square root of the number of features for classification tasks. For this problem there are 65 features, therefore mtry is 8.
+
+ntree: The number of trees in the ensemble. The default value is 500.
+
+nodesize: The minimum size of terminal nodes (leaves). The default value is 1 for classification.
+
+replace: Use bootstrap samples with replacement. The default value is TRUE, enabling bagging.  This is a resampling technique for creating multiple datasets for training.
+
+sampsize: The number of samples used in each tree (without replacement) when replace = FALSE. The default value is the size of the training set.
+
+maxnodes: The maximum number of terminal nodes allowed in each tree. The default value is NULL, no upper bound.
+
+   With these parameter settings the execution of the training consumed less than 30% of the CPU and 50% of the memory and completed in approximately four hours.
+
+## 6. Evaluation
+
+   The model was tested on data from the test data set.   The accuracy of the model is 0.988785.  
+   
+  The confusion matrix below illustrates the performance of the model.
+
+
+```{r echo=FALSE }
+
+cm <- confusionMatrix(pred, as.factor(testingset$classe))
+
+# Extract the confusion matrix table
+conf_matrix_table <- as.table(cm$table)
+
+# Convert to data frame for ggplot
+conf_matrix_df <- as.data.frame(conf_matrix_table)
+
+# Plot the confusion matrix
+
+ggplot(data = conf_matrix_df, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), vjust = 1) +
+  theme_classic() +scale_fill_gradient(low = "white", high = "blue") +
+  labs(x = "Reference", y = "Prediction", fill = "Frequency")
+```
+
+   
+   The table below shows the fractions of distribution.  Summing the diagonal of this table provided the out of sample error rate and overall accuracy. 
+   
+```{r echo=FALSE}
+#reporttable <- table(pred,testingset$classe)
+#print(reporttable)
+
+table(pred,testingset$classe)/length(testingset$classe)
+
+fraction_count <- table(pred,testingset$classe)/length(testingset$classe)
+test_accuracy <- fraction_count["A","A"] + fraction_count["B","B"] +
+  fraction_count["C","C"] + fraction_count["D","D"] +
+  fraction_count["E","E"]
+print(paste("Accuracy = ", test_accuracy))
+```   
+   
+   
+  
+   With the accuracy of nearly 0.99, no other tuning of parameters is necessary.
+
+# Variable Importance
+
+ The following plot illustrates the variable importance for the random forest model.   The plot allows the assessment as to what features have the most influence on the prediction.  It is interesting to note that the measurements from the belt most influence the classification of the exercise performed:
+
+```{r chunk1, fig.width=18, fig.height=16}
+
+ggplot(importance, echo=FALSE)
+```
+
+
+# Summary
+
+   The key decisions made in the development of the model were the selection of the type of model (Random Forest), the settings for the parameters (default), and the need to tune the model to improve the performance (near 99% accuracy, no tuning needed).  The random forest prediction model predicted the technique used in the Unilateral Dumbbell Biceps Curl exercise.  The model contained 65 features to predict one of 5 techniques.  The model’s accuracy was 0.988785 for the tested data.  In conclusion, based on the data provided, quantitative exercise data can classify the exercise technique performed.
+
+
